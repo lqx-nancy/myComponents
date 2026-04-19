@@ -1,0 +1,29 @@
+.list {
+    list-style: none;
+    padding: 0;
+    margin: 8px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    .item {
+        padding: 8px 12px;
+        border-radius: 12px;
+        background: #f7f8fa;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        max-width: fit-content;
+
+        &:hover {
+            background: #e9ebf0;
+        }
+    }
+
+    .item.active {
+        background: #cdf8e2;
+        color: #0e6240;
+    }
+}

@@ -1,0 +1,39 @@
+.z-menu {
+  display: flex;
+  gap: 8px;
+  background: #fff;
+  padding: 8px;
+  border-radius: 8px;
+
+  &--horizontal {
+    flex-direction: row;
+    max-width: fit-content;
+  }
+
+  &--vertical {
+    flex-direction: column;
+    width: 220px;
+  }
+
+  &__item {
+    padding: 10px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: #f0f5ff;
+    }
+
+    &.is-active {
+      background: #e6ffeb;
+      color: #6cf585;
+      font-weight: 600;
+    }
+
+    &.is-disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
