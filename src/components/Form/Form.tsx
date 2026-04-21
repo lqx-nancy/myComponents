@@ -1,111 +1,124 @@
-import './Form.scss'
-import { useForm, Controller } from 'react-hook-form'
-import Select from '../Select/Select'
-import Upload from '../Upload/Upload'
-import type { UploadFileItem } from '../Upload/Upload'
+import React, { useCallback, useEffect, useRef, useState, useContext, } from "react";
+import "./Form.scss";
+import '../Multiselect/mutiselect'
 
-interface FormValues {
-  item: string
-  attachments: UploadFileItem[]
+export interface FormRule {
+  required?: boolean;
+  message?: string;
+  validator?: (value: any) => boolean | string;
+  min?: number;
 }
 
-const Options = [
-  { label: '数据结构', value: 'zwz' },
-  { label: '狗屎高数💩👎👎👎👎👎👎👎', value: '臭狗屎'},
-  { label: '蒲熠星啊蒲熠星🌟', value: 'star' }
-]
+export interface FormRules {
+  [key: string]: FormRule[];
+}
 
-export default function Form() {
-  const {
-    handleSubmit,
-    control,
-    formState: { errors },
-    reset,
-  } = useForm<FormValues>({
-    defaultValues: {
-      item: '',
-      attachments: [],
-    },
-  })
+export interface FormContextValue {
+  model: Record<string, any>;
+  rules: FormRules;
+  ifError: (name: string, error: string) => void;
+}
 
-  const onSubmit = (data: FormValues) => {
-    console.log('submit data:', data)
-    alert(
-      JSON.stringify(
-        {
-          item: data.item,
-          attachments: data.attachments.map((item) => ({
-            name: item.name,
-            size: item.size,
-            type: item.type,
-          })),
-        },
-        null,
-        2,
-      ),
-    )
-  }
+export interface FormProps {
+  children: React.ReactNode;
+  model: Record<string, any>;
+  rules?: FormRules;
+  onSubmit: (value: any) => void;
+  onReset: () => void;
+}
+
+export interface FormItemProps {
+  name: string;
+  label?: string;
+  children: React.ReactNode;
+}
+
+export const FormContext = React.createContext<FormContextValue | null>(null);
+
+export function Form({
+  children,
+  model,
+  rules = {},
+  onSubmit,
+  onReset,
+}: FormProps) {
+  const ifError = useCallback((name: string, error: string) => {
+    // 可在这里收集表单错误
+    console.log(name, error)
+  }, []);
+
+  const handleSubmit: React.FormEventHandler<HTMLFormElement> = (e) => {
+    e.preventDefault();
+    onSubmit(model);
+  };
+
 
   return (
-    <form className="form" onSubmit={handleSubmit(onSubmit)}>
-      <div className="form-item">
-        <label className="form-label">Item</label>
-        <Controller
-          name="item"
-          control={control}
-          rules={{ required: 'Please select a fruit' }}
-          render={({ field }) => (
-            <Select
-              value={field.value}
-              onChange={field.onChange}
-              options={Options}
-              placeholder="Please select"
-            />
-          )}
-        />
-        {errors.item && <div className="form-error">{errors.item.message}</div>}
-      </div>
-
-      <div className="form-item">
-        <label className="form-label">👋</label>
-        <Controller
-          name="attachments"
-          control={control}
-          rules={{
-            validate: (files) => files.length > 0 || 'Please upload at least one file',
-          }}
-          render={({ field }) => (
-            <Upload
-              value={field.value}
-              onChange={field.onChange}
-              multiple
-              maxCount={3}
-              buttonText="Upload file"
-            />
-          )}
-        />
-        {errors.attachments && (
-          <div className="form-error">{errors.attachments.message}</div>
-        )}
-      </div>
-
-      <div className="form-actions">
-        <button className="form-button form-button-primary" type="submit">
-          上传
-        </button>
-        <button
-          className="form-button"
-          type="button"
-          onClick={() =>
-            reset({
-              item: '',
-              attachments: [],
-            })
-          }
-        >
-          重置
-        </button>
-      </div>
-    </form>
-  )
+    <FormContext.Provider value={{ model, rules, ifError }}>
+      <form className="form" onSubmit={handleSubmit} onReset={onReset}>
+        {children}
+      </form>
+    </FormContext.Provider>
+  );
 }
+
+export function FormItem({ name, label, children }: FormItemProps) {
+  const context = useContext(FormContext);
+  if (!context) {
+    throw new Error("FormItem must be used within a Form");
+  }
+
+  const { model, rules, ifError } = context;
+  const value = model[name];
+  const [error, setError] = useState("");
+  const ruleList = rules[name] || [];
+  const prevalue = useRef(value);
+
+  useEffect(() => {
+    if (prevalue.current === value) {
+      return;
+    }
+
+    prevalue.current = value;
+    let errMsg = "";
+
+    for (const rule of ruleList) {
+      if (rule.required && (value === undefined || value === "")) {
+        errMsg = rule.message || "不能为空";
+        break;
+      }
+
+      if (typeof value === "string") {
+        if (rule.min && value.length < rule.min) {
+          errMsg = rule.message || `最少${rule.min}位`;
+          break;
+        }
+      }
+
+      if (rule.validator) {
+        const res = rule.validator(value);
+        errMsg =
+          typeof res === "string"
+            ? res
+            : res
+              ? ""
+              : rule.message || "格式错误";
+
+        if (errMsg) break;
+      }
+    }
+
+    setError(errMsg);
+    ifError(name, errMsg);
+  }, [value, ruleList, name, ifError]);
+
+  return (
+    <div className="form-item">
+      {label && <label>{label}</label>}
+      <div>{children}</div>
+      {error && <div className="error">{error}</div>}
+    </div>
+  );
+}
+
+export default { Form, FormItem };
